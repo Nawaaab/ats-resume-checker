@@ -19,14 +19,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 body { font-family: Arial; background:#f4f4f4; }
 .container { max-width:900px; margin:auto; background:#fff; padding:20px; }
 textarea, input { width:100%; padding:10px; margin-bottom:15px; }
-button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; font-size:16px; }
+button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; font-size:16px; cursor:pointer; }
 .result { display:none; margin-top:20px; }
 .green { color:green; }
 .orange { color:orange; }
 .red { color:red; }
 .fix { background:#fafafa; padding:10px; margin-bottom:12px; }
-.old { text-decoration:line-through; color:red; }
+.old { color:red; text-decoration:line-through; }
 .new { color:green; font-weight:bold; }
+.status { font-size:14px; color:#555; margin-bottom:10px; }
 </style>
 </head>
 
@@ -38,10 +39,12 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
 <h3>Upload Resume (PDF or DOCX)</h3>
 <input type="file" id="resumeFile" accept=".pdf,.docx">
 
+<div class="status" id="status">Resume not loaded</div>
+
 <h3>Job Description / KPIs</h3>
 <textarea id="jobDesc" placeholder="Paste job description here..."></textarea>
 
-<button onclick="runATS()">Check ATS Score</button>
+<button onclick="calculateATS()">Check ATS Score</button>
 
 <div class="result" id="result">
   <h2>ATS Score</h2>
@@ -54,27 +57,26 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
 </div>
 
 <script>
-async function runATS() {
-  const file = document.getElementById("resumeFile").files[0];
-  const jd = document.getElementById("jobDesc").value.toLowerCase();
+let RESUME_TEXT = "";
 
-  if (!file || jd.length < 30) {
-    alert("Upload resume and paste job description.");
-    return;
-  }
+/* -------- FILE LOADING (SEPARATE & SAFE) -------- */
 
-  let resumeText = "";
+document.getElementById("resumeFile").addEventListener("change", async function () {
+  const file = this.files[0];
+  document.getElementById("status").innerText = "Loading resume…";
+
   try {
-    resumeText = file.type === "application/pdf"
-      ? await readPDF(file)
-      : await readDOCX(file);
-  } catch {
-    alert("Could not read file. Try another resume.");
-    return;
+    if (file.type === "application/pdf") {
+      RESUME_TEXT = await readPDF(file);
+    } else {
+      RESUME_TEXT = await readDOCX(file);
+    }
+    document.getElementById("status").innerText = "Resume loaded successfully";
+  } catch (e) {
+    RESUME_TEXT = "";
+    document.getElementById("status").innerText = "Failed to read resume file";
   }
-
-  computeATS(resumeText, jd);
-}
+});
 
 async function readPDF(file) {
   const buffer = await file.arrayBuffer();
@@ -94,30 +96,39 @@ async function readDOCX(file) {
   return result.value || "";
 }
 
-function computeATS(resume, jd) {
-  const resumeLower = resume.toLowerCase();
-  const lines = resume.split("\n").filter(l => l.trim().length > 10);
+/* -------- ATS SCORING -------- */
+
+function calculateATS() {
+  const jd = document.getElementById("jobDesc").value.toLowerCase();
+
+  if (RESUME_TEXT.length < 50 || jd.length < 50) {
+    alert("Please upload resume and paste full job description.");
+    return;
+  }
+
+  const resume = RESUME_TEXT.toLowerCase();
+  const resumeLines = resume.split("\n").filter(l => l.trim().length > 12);
   const keywords = extractKeywords(jd);
 
-  /* 1. Keyword Match (45%) */
-  const keywordHits = keywords.filter(k => resumeLower.includes(k)).length;
+  // 1. Keyword Match (45%)
+  const keywordHits = keywords.filter(k => resume.includes(k)).length;
   const keywordScore = ratio(keywordHits, keywords.length);
 
-  /* 2. Skills Alignment (25%) */
-  const skills = keywords.filter(k => k.length >= 5);
-  const skillHits = skills.filter(s => resumeLower.includes(s)).length;
-  const skillScore = ratio(skillHits, skills.length);
+  // 2. Skills Alignment (25%)
+  const skillWords = keywords.filter(k => k.length >= 5);
+  const skillHits = skillWords.filter(k => resume.includes(k)).length;
+  const skillScore = ratio(skillHits, skillWords.length);
 
-  /* 3. Role & Title Match (15%) */
-  const roleScore = keywords.some(k => resumeLower.includes(k)) ? 1 : 0;
+  // 3. Role & Title Match (15%)
+  const roleScore = keywords.some(k => resume.includes(k)) ? 1 : 0;
 
-  /* 4. Experience Relevance (10%) */
-  const relevantLines = lines.filter(l =>
-    /\b(led|managed|built|improved|designed|executed)\b/i.test(l)
+  // 4. Experience Relevance (10%)
+  const experienceLines = resumeLines.filter(l =>
+    /\b(led|managed|built|improved|designed|executed|delivered)\b/i.test(l)
   ).length;
-  const experienceScore = ratio(relevantLines, lines.length);
+  const experienceScore = ratio(experienceLines, resumeLines.length);
 
-  /* 5. ATS Hygiene (5%) */
+  // 5. Formatting & ATS Hygiene (5%)
   const hygieneScore =
     resume.includes("|") || resume.includes("•") ? 0.6 : 1;
 
@@ -131,7 +142,7 @@ function computeATS(resume, jd) {
     ) * 100
   );
 
-  render(finalScore, lines, keywords);
+  renderOutput(finalScore, resumeLines, keywords);
 }
 
 function extractKeywords(text) {
@@ -142,7 +153,9 @@ function ratio(a, b) {
   return b === 0 ? 0 : Math.min(1, a / b);
 }
 
-function render(score, lines, keywords) {
+/* -------- OUTPUT RENDERING -------- */
+
+function renderOutput(score, lines, keywords) {
   const scoreEl = document.getElementById("score");
   scoreEl.innerText = score + "%";
   scoreEl.className = score >= 70 ? "green" : score >= 50 ? "orange" : "red";
@@ -154,18 +167,18 @@ function render(score, lines, keywords) {
     let shown = 0;
     lines.forEach(line => {
       if (shown >= 5) return;
-      if (!keywords.some(k => line.toLowerCase().includes(k))) {
+      if (!keywords.some(k => line.includes(k))) {
         fixes.innerHTML += `
           <div class="fix">
             <div class="old">${line}</div>
-            <div class="new">Led ${keywords[shown] || "key"} initiatives aligned with job KPIs and measurable impact.</div>
+            <div class="new">Led ${keywords[shown] || "key"} initiatives aligned with job KPIs and measurable outcomes.</div>
           </div>
         `;
         shown++;
       }
     });
   } else {
-    fixes.innerHTML = "<p>Your resume is well aligned with this role.</p>";
+    fixes.innerHTML = "<p>Your resume already aligns well with this role.</p>";
   }
 
   document.getElementById("result").style.display = "block";
