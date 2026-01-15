@@ -1,1 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Free ATS Resume Checker | AI Resume Optimization</title>
+  <meta name="description" content="Check your resume ATS score for free. AI-powered resume optimization to beat Applicant Tracking Systems and get more interviews.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <meta name="keywords" content="ATS resume checker, AI resume optimization, free ATS score, resume ATS test">
+
+  <!-- Basic Styling -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      background: #ffffff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    p {
+      line-height: 1.6;
+    }
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+    button {
+      background: #0a66c2;
+      color: white;
+      padding: 14px 20px;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #004182;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #eef6ff;
+      display: none;
+    }
+    .score {
+      font-size: 32px;
+      font-weight: bold;
+      color: #0a66c2;
+    }
+    .ads {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f0f0f0;
+      text-align: center;
+      color: #777;
+    }
+    .cta {
+      margin-top: 30px;
+      padding: 20px;
+      background: #fff3cd;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Free ATS Resume Checker</h1>
+  <p>
+    Paste your resume and job description below to instantly check your 
+    <strong>ATS compatibility score</strong> using AI-powered analysis.
+  </p>
+
+  <h3>Your Resume</h3>
+  <textarea id="resume" placeholder="Paste your resume text here..."></textarea>
+
+  <h3>Job Description</h3>
+  <textarea id="job" placeholder="Paste the job description here..."></textarea>
+
+  <button onclick="checkATS()">Check ATS Score</button>
+
+  <!-- ADS PLACEHOLDER -->
+  <div class="ads">
+    Google AdSense Ad Will Appear Here
+  </div>
+
+  <div class="result" id="result">
+    <p>Your ATS Score:</p>
+    <div class="score" id="score">0%</div>
+
+    <h3>Key Findings</h3>
+    <ul id="feedback"></ul>
+  </div>
+
+  <div class="cta">
+    <h3>Want a Fully Optimized Resume?</h3>
+    <p>
+      Get a professionally optimized, ATS-ready resume tailored to your target role.
+    </p>
+    <p><strong>Email us:</strong> yourname@email.com</p>
+  </div>
+
+</div>
+
+<script>
+function checkATS() {
+  const resume = document.getElementById("resume").value;
+  const job = document.getElementById("job").value;
+
+  if (resume.length < 100 || job.length < 100) {
+    alert("Please paste full resume and job description.");
+    return;
+  }
+
+  // Simulated ATS Score Logic (v1)
+  let score = Math.floor(60 + Math.random() * 30);
+
+  document.getElementById("score").innerText = score + "%";
+
+  const feedback = document.getElementById("feedback");
+  feedback.innerHTML = "";
+
+  const points = [
+    "Your resume uses standard ATS-friendly formatting.",
+    "Some important keywords from the job description are missing.",
+    "Consider adding measurable achievements.",
+    "Your skills section can be better aligned with the role.",
+    "Avoid using tables, graphics, or icons."
+  ];
+
+  points.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = p;
+    feedback.appendChild(li);
+  });
+
+  document.getElementById("result").style.display = "block";
+}
+</script>
+
+</body>
+</html>
 
