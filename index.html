@@ -3,22 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <title>Free ATS Resume Checker | Upload PDF or Word</title>
-<meta name="description" content="Upload your resume PDF or Word file and check ATS score against job description. Free AI resume optimization tool.">
+<meta name="description" content="Upload your resume PDF or Word file and check ATS score against job description. Get line-by-line resume improvement suggestions.">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- PDF & DOCX libraries -->
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 
 <style>
-body { font-family: Arial; background:#f7f7f7; }
-.container { max-width:900px; background:#fff; margin:auto; padding:20px; }
-textarea, input[type=file] { width:100%; margin-bottom:15px; }
-button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; font-size:16px; }
-.result { display:none; margin-top:20px; padding:20px; }
-.green { color:green; }
-.orange { color:orange; }
-.red { color:red; }
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  margin: 0;
+}
+.container {
+  max-width: 900px;
+  background: #ffffff;
+  margin: 30px auto;
+  padding: 20px;
+}
+textarea, input[type=file] {
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 10px;
+}
+button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  background: #0a66c2;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.result {
+  display: none;
+  margin-top: 25px;
+}
+.green { color: green; }
+.orange { color: orange; }
+.red { color: red; }
+.line-box {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #fafafa;
+}
+.old-line {
+  color: red;
+  text-decoration: line-through;
+}
+.new-line {
+  color: green;
+  font-weight: bold;
+}
 </style>
 </head>
 
@@ -26,7 +63,7 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
 <div class="container">
 
 <h1>Free ATS Resume Checker</h1>
-<p>Upload your resume and paste job description to check ATS alignment.</p>
+<p>Upload your resume and paste job description to get ATS score and line-by-line improvement suggestions.</p>
 
 <h3>Upload Resume (PDF or Word)</h3>
 <input type="file" id="resumeFile" accept=".pdf,.docx">
@@ -40,8 +77,8 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
   <h2>ATS Score</h2>
   <h1 id="score"></h1>
 
-  <h3>Recommendations</h3>
-  <ul id="suggestions"></ul>
+  <h3>Recommended Resume Improvements</h3>
+  <div id="suggestions"></div>
 </div>
 
 </div>
@@ -54,7 +91,7 @@ async function analyzeResume() {
   const jobDesc = document.getElementById("jobDesc").value.toLowerCase();
 
   if (!file || jobDesc.length < 50) {
-    alert("Upload resume and paste full job description.");
+    alert("Please upload resume and paste full job description.");
     return;
   }
 
@@ -64,65 +101,80 @@ async function analyzeResume() {
     resumeText = await readDOCX(file);
   }
 
-  calculateATS(resumeText.toLowerCase(), jobDesc);
+  calculateATS(resumeText, jobDesc);
 }
 
 async function readPDF(file) {
   const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   let text = "";
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    content.items.forEach(item => text += item.str + " ");
+    content.items.forEach(item => text += item.str + "\n");
   }
   return text;
 }
 
 async function readDOCX(file) {
   const buffer = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({arrayBuffer: buffer});
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer });
   return result.value;
 }
 
 function calculateATS(resume, job) {
-  const jobWords = [...new Set(job.match(/\b[a-z]{3,}\b/g))];
-  let matched = jobWords.filter(word => resume.includes(word));
+  const resumeLines = resume.split("\n").filter(l => l.trim().length > 15);
+  const jobKeywords = [...new Set(job.match(/\b[a-z]{4,}\b/g))];
 
-  let score = Math.min(100, Math.round((matched.length / jobWords.length) * 100));
-
-  let scoreEl = document.getElementById("score");
-  scoreEl.innerText = score + "%";
-
-  scoreEl.className =
-    score >= 70 ? "green" :
-    score >= 50 ? "orange" : "red";
-
-  const suggestions = document.getElementById("suggestions");
-  suggestions.innerHTML = "";
-
-  if (score < 70) {
-    matched.slice(0,5).forEach(k => {
-      let li = document.createElement("li");
-      li.innerText = `Add or strengthen keyword: "${k}"`;
-      suggestions.appendChild(li);
+  let matched = 0;
+  resumeLines.forEach(line => {
+    jobKeywords.forEach(k => {
+      if (line.toLowerCase().includes(k)) matched++;
     });
+  });
 
-    let li2 = document.createElement("li");
-    li2.innerText = "Align your skills and experience sections closely to job KPIs.";
-    suggestions.appendChild(li2);
-  } else {
-    let li = document.createElement("li");
-    li.innerText = "Your resume is well aligned with the job description.";
-    suggestions.appendChild(li);
-  }
+  const score = Math.min(100, Math.round((matched / jobKeywords.length) * 100));
+
+  const scoreEl = document.getElementById("score");
+  scoreEl.innerText = score + "%";
+  scoreEl.className = score >= 70 ? "green" : score >= 50 ? "orange" : "red";
+
+  generateSuggestions(resumeLines, jobKeywords);
 
   document.getElementById("result").style.display = "block";
 }
-</script>
 
-</body>
-</html>
+function generateSuggestions(lines, keywords) {
+  const container = document.getElementById("suggestions");
+  container.innerHTML = "";
+  let count = 0;
 
+  lines.forEach(line => {
+    if (count >= 6) return;
 
+    const hits = keywords.filter(k => line.toLowerCase().includes(k));
+
+    if (hits.length <= 1) {
+      const keyword = keywords[count % keywords.length];
+      const improved = generateImprovedLine(keyword);
+
+      const box = document.createElement("div");
+      box.className = "line-box";
+      box.innerHTML = `
+        <div class="old-line">${line}</div>
+        <div class="new-line">${improved}</div>
+      `;
+      container.appendChild(box);
+      count++;
+    }
+  });
+
+  if (count === 0) {
+    container.innerHTML = "<p>Your resume is already well aligned with the job description.</p>";
+  }
+}
+
+function generateImprovedLine(keyword) {
+  const verbs = ["Led", "Implemented", "Optimized", "Executed", "Designed"];
+  const verb = verbs[Ma]()
