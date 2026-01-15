@@ -4,16 +4,22 @@
 <meta charset="UTF-8">
 <title>Free ATS Resume Checker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Upload resume PDF or Word and check ATS score using keyword match, skills alignment, role match, experience relevance, and ATS hygiene.">
 
+<!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+</script>
+
+<!-- DOCX -->
 <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 
 <style>
 body { font-family: Arial; background:#f4f4f4; }
-.container { max-width:900px; background:#fff; margin:auto; padding:20px; }
+.container { max-width:900px; margin:auto; background:#fff; padding:20px; }
 textarea, input { width:100%; padding:10px; margin-bottom:15px; }
-button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; font-size:16px; cursor:pointer; }
+button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; font-size:16px; }
 .result { display:none; margin-top:20px; }
 .green { color:green; }
 .orange { color:orange; }
@@ -29,7 +35,7 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
 
 <h1>Free ATS Resume Checker</h1>
 
-<h3>Upload Resume (PDF / DOCX)</h3>
+<h3>Upload Resume (PDF or DOCX)</h3>
 <input type="file" id="resumeFile" accept=".pdf,.docx">
 
 <h3>Job Description / KPIs</h3>
@@ -52,16 +58,22 @@ async function runATS() {
   const file = document.getElementById("resumeFile").files[0];
   const jd = document.getElementById("jobDesc").value.toLowerCase();
 
-  if (!file || jd.length < 50) {
-    alert("Upload resume and paste full job description.");
+  if (!file || jd.length < 30) {
+    alert("Upload resume and paste job description.");
     return;
   }
 
-  const resumeText = file.type === "application/pdf"
-    ? await readPDF(file)
-    : await readDOCX(file);
+  let resumeText = "";
+  try {
+    resumeText = file.type === "application/pdf"
+      ? await readPDF(file)
+      : await readDOCX(file);
+  } catch {
+    alert("Could not read file. Try another resume.");
+    return;
+  }
 
-  calculateScore(resumeText, jd);
+  computeATS(resumeText, jd);
 }
 
 async function readPDF(file) {
@@ -79,79 +91,86 @@ async function readPDF(file) {
 async function readDOCX(file) {
   const buffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-  return result.value;
+  return result.value || "";
 }
 
-function calculateScore(resume, jd) {
-  const resumeLines = resume.split("\n").filter(l => l.trim().length > 12);
-  const jdWords = extractWords(jd);
+function computeATS(resume, jd) {
   const resumeLower = resume.toLowerCase();
+  const lines = resume.split("\n").filter(l => l.trim().length > 10);
+  const keywords = extractKeywords(jd);
 
   /* 1. Keyword Match (45%) */
-  const keywordHits = jdWords.filter(w => resumeLower.includes(w)).length;
-  const keywordScore = safeDivide(keywordHits, jdWords.length);
+  const keywordHits = keywords.filter(k => resumeLower.includes(k)).length;
+  const keywordScore = ratio(keywordHits, keywords.length);
 
   /* 2. Skills Alignment (25%) */
-  const skillWords = jdWords.filter(w => w.length >= 5);
-  const skillHits = skillWords.filter(w => resumeLower.includes(w)).length;
-  const skillScore = safeDivide(skillHits, skillWords.length);
+  const skills = keywords.filter(k => k.length >= 5);
+  const skillHits = skills.filter(s => resumeLower.includes(s)).length;
+  const skillScore = ratio(skillHits, skills.length);
 
   /* 3. Role & Title Match (15%) */
-  const roleScore = jd.includes("manager") && resumeLower.includes("manager") ? 1 :
-                    jd.includes("engineer") && resumeLower.includes("engineer") ? 1 :
-                    jd.includes("analyst") && resumeLower.includes("analyst") ? 1 : 0;
+  const roleScore = keywords.some(k => resumeLower.includes(k)) ? 1 : 0;
 
   /* 4. Experience Relevance (10%) */
-  let relevantLines = 0;
-  resumeLines.forEach(l => {
-    if (/\b(led|managed|built|improved|increased|designed|executed)\b/i.test(l)
-        && /\d+/.test(l)) relevantLines++;
-  });
-  const experienceScore = safeDivide(relevantLines, resumeLines.length);
+  const relevantLines = lines.filter(l =>
+    /\b(led|managed|built|improved|designed|executed)\b/i.test(l)
+  ).length;
+  const experienceScore = ratio(relevantLines, lines.length);
 
   /* 5. ATS Hygiene (5%) */
-  let hygienePenalty = resume.includes("|") || resume.includes("•") ? 0.7 : 1;
+  const hygieneScore =
+    resume.includes("|") || resume.includes("•") ? 0.6 : 1;
 
-  /* Final Weighted Score */
   const finalScore = Math.round(
     (
       keywordScore * 0.45 +
       skillScore * 0.25 +
       roleScore * 0.15 +
       experienceScore * 0.10 +
-      hygienePenalty * 0.05
+      hygieneScore * 0.05
     ) * 100
   );
 
-  renderScore(finalScore);
-  generateFixes(resumeLines, jdWords, finalScore);
+  render(finalScore, lines, keywords);
 }
 
-function extractWords(text) {
-  return [...new Set((text.match(/\b[a-z]{4,}\b/g) || []))].slice(0, 40);
+function extractKeywords(text) {
+  return [...new Set(text.match(/\b[a-z]{4,}\b/g) || [])].slice(0, 30);
 }
 
-function safeDivide(a, b) {
+function ratio(a, b) {
   return b === 0 ? 0 : Math.min(1, a / b);
 }
 
-function renderScore(score) {
-  const el = document.getElementById("score");
-  el.innerText = score + "%";
-  el.className = score >= 70 ? "green" : score >= 50 ? "orange" : "red";
-  document.getElementById("result").style.display = "block";
-}
+function render(score, lines, keywords) {
+  const scoreEl = document.getElementById("score");
+  scoreEl.innerText = score + "%";
+  scoreEl.className = score >= 70 ? "green" : score >= 50 ? "orange" : "red";
 
-function generateFixes(lines, keywords, score) {
-  const box = document.getElementById("fixes");
-  box.innerHTML = "";
+  const fixes = document.getElementById("fixes");
+  fixes.innerHTML = "";
 
-  if (score >= 70) {
-    box.innerHTML = "<p>Your resume is well aligned with the job description.</p>";
-    return;
+  if (score < 70) {
+    let shown = 0;
+    lines.forEach(line => {
+      if (shown >= 5) return;
+      if (!keywords.some(k => line.toLowerCase().includes(k))) {
+        fixes.innerHTML += `
+          <div class="fix">
+            <div class="old">${line}</div>
+            <div class="new">Led ${keywords[shown] || "key"} initiatives aligned with job KPIs and measurable impact.</div>
+          </div>
+        `;
+        shown++;
+      }
+    });
+  } else {
+    fixes.innerHTML = "<p>Your resume is well aligned with this role.</p>";
   }
 
-  let shown = 0;
-  lines.forEach(line => {
-    if (shown >= 6) return;
-    const hasKeyword = keywords.some(k =
+  document.getElementById("result").style.display = "block";
+}
+</script>
+
+</body>
+</html>
