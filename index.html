@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Free ATS Resume Checker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Free ATS Resume Checker with score breakdown and AI-powered line-by-line improvements.">
+<meta name="description" content="Free ATS Resume Checker with detailed score breakdown. Upload your resume and see how ATS-friendly it is.">
 
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -18,14 +18,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 <style>
 :root {
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --bg: #f1f5f9;
-  --card: #ffffff;
-  --muted: #64748b;
+  --primary: #4f46e5;
   --success: #16a34a;
   --warning: #f59e0b;
   --danger: #dc2626;
+  --bg: #f8fafc;
+  --card: rgba(255,255,255,0.85);
+  --border: rgba(255,255,255,0.6);
+  --text: #0f172a;
+  --muted: #64748b;
 }
 
 * { box-sizing: border-box; }
@@ -33,68 +34,74 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(180deg, #eef2ff, #f8fafc);
-  color: #0f172a;
+  background: radial-gradient(circle at top, #eef2ff, #f8fafc 60%);
+  color: var(--text);
 }
 
 .container {
   max-width: 980px;
-  margin: 40px auto;
+  margin: 48px auto;
   padding: 0 20px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.hero h1 {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.hero p {
+  color: var(--muted);
+  font-size: 16px;
 }
 
 .card {
   background: var(--card);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   padding: 28px;
-  margin-bottom: 24px;
-}
-
-h1 {
-  font-size: 32px;
-  margin-bottom: 6px;
-}
-
-.subtitle {
-  color: var(--muted);
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
 }
 
 label {
   font-weight: 600;
-  display: block;
   margin-bottom: 6px;
+  display: block;
 }
 
 input, textarea {
   width: 100%;
   padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #cbd5f5;
+  border-radius: 12px;
+  border: 1px solid #c7d2fe;
   margin-bottom: 18px;
   font-size: 15px;
 }
 
 textarea {
   min-height: 140px;
-  resize: vertical;
 }
 
 button {
-  background: var(--primary);
-  color: #fff;
-  padding: 16px;
   width: 100%;
+  padding: 16px;
   font-size: 16px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
   font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
 }
 
 button:hover {
-  background: var(--primary-dark);
+  opacity: 0.95;
 }
 
 .status {
@@ -105,48 +112,50 @@ button:hover {
 
 .result {
   display: none;
+  text-align: center;
 }
 
-.score-badge {
-  font-size: 48px;
+.score-ring {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
   font-weight: 800;
-  margin: 10px 0;
+  background: #f1f5f9;
 }
 
-.green { color: var(--success); }
-.orange { color: var(--warning); }
-.red { color: var(--danger); }
+.green { color: var(--success); border: 8px solid var(--success); }
+.orange { color: var(--warning); border: 8px solid var(--warning); }
+.red { color: var(--danger); border: 8px solid var(--danger); }
 
 .breakdown {
+  margin-top: 28px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 20px;
+  gap: 16px;
 }
 
-.breakdown div {
-  background: #f8fafc;
-  padding: 14px;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
-.fix {
-  background: #f8fafc;
-  padding: 16px;
+.breakdown-card {
+  background: #ffffff;
   border-radius: 14px;
-  margin-bottom: 14px;
+  padding: 18px;
+  text-align: left;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
 }
 
-.old {
-  color: var(--danger);
-  text-decoration: line-through;
-  margin-bottom: 6px;
+.breakdown-card span {
+  font-size: 13px;
+  color: var(--muted);
 }
 
-.new {
-  color: var(--success);
-  font-weight: 600;
+.breakdown-card strong {
+  display: block;
+  font-size: 22px;
+  margin-top: 6px;
 }
 </style>
 </head>
@@ -155,12 +164,12 @@ button:hover {
 
 <div class="container">
 
-  <div class="card">
+  <div class="hero">
     <h1>ATS Resume Checker</h1>
-    <div class="subtitle">
-      Upload your resume and instantly see how well it matches the job description.
-    </div>
+    <p>See how well your resume matches the job description — instantly.</p>
+  </div>
 
+  <div class="card">
     <label>Upload Resume (PDF or Word)</label>
     <input type="file" id="resumeFile" accept=".pdf,.docx">
     <div class="status" id="status">Resume not loaded</div>
@@ -173,13 +182,9 @@ button:hover {
 
   <div class="card result" id="result">
     <h2>Your ATS Score</h2>
-    <div id="score" class="score-badge"></div>
+    <div id="score" class="score-ring"></div>
 
-    <h3>Score Breakdown</h3>
     <div class="breakdown" id="breakdown"></div>
-
-    <h3 style="margin-top:30px;">Recommended Improvements</h3>
-    <div id="fixes"></div>
   </div>
 
 </div>
@@ -196,8 +201,8 @@ document.getElementById("resumeFile").addEventListener("change", async function 
       : await readDOCX(file);
     document.getElementById("status").innerText = "Resume loaded successfully";
   } catch {
-    document.getElementById("status").innerText = "Failed to read resume";
     RESUME_TEXT = "";
+    document.getElementById("status").innerText = "Failed to read resume file";
   }
 });
 
@@ -237,43 +242,32 @@ function calculateATS() {
   const hygieneScore = resume.includes("|") ? 0.6 : 1;
 
   const breakdown = {
-    keyword: Math.round(keywordScore * 45),
-    skills: Math.round(skillScore * 25),
-    role: Math.round(roleScore * 15),
-    experience: Math.round(experienceScore * 10),
-    hygiene: Math.round(hygieneScore * 5)
+    "Keyword Match": Math.round(keywordScore * 45),
+    "Skills Alignment": Math.round(skillScore * 25),
+    "Role & Title Match": Math.round(roleScore * 15),
+    "Experience Relevance": Math.round(experienceScore * 10),
+    "ATS Hygiene": Math.round(hygieneScore * 5)
   };
 
   const finalScore = Object.values(breakdown).reduce((a,b)=>a+b,0);
-  render(finalScore, breakdown, lines, keywords);
+  render(finalScore, breakdown);
 }
 
-function render(score, breakdown, lines, keywords) {
+function render(score, breakdown) {
   const scoreEl = document.getElementById("score");
   scoreEl.innerText = score + "%";
-  scoreEl.className = "score-badge " + (score>=70?"green":score>=50?"orange":"red");
+  scoreEl.className = "score-ring " + (score>=70?"green":score>=50?"orange":"red");
 
-  document.getElementById("breakdown").innerHTML = `
-    <div>Keyword Match: <strong>${breakdown.keyword}/45</strong></div>
-    <div>Skills Alignment: <strong>${breakdown.skills}/25</strong></div>
-    <div>Role Match: <strong>${breakdown.role}/15</strong></div>
-    <div>Experience: <strong>${breakdown.experience}/10</strong></div>
-    <div>ATS Hygiene: <strong>${breakdown.hygiene}/5</strong></div>
-  `;
+  const breakdownDiv = document.getElementById("breakdown");
+  breakdownDiv.innerHTML = "";
 
-  const fixes = document.getElementById("fixes");
-  fixes.innerHTML = "";
-  if (score < 70) {
-    lines.slice(0,5).forEach(line=>{
-      fixes.innerHTML += `
-        <div class="fix">
-          <div class="old">${line}</div>
-          <div class="new">Optimized version aligned with job keywords and measurable outcomes.</div>
-        </div>
-      `;
-    });
-  } else {
-    fixes.innerHTML = "<p>Your resume is well aligned with this role.</p>";
+  for (const [key, value] of Object.entries(breakdown)) {
+    breakdownDiv.innerHTML += `
+      <div class="breakdown-card">
+        <span>${key}</span>
+        <strong>${value}</strong>
+      </div>
+    `;
   }
 
   document.getElementById("result").style.display = "block";
