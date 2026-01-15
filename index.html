@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Free ATS Resume Checker with detailed score breakdown. Upload your resume and see how ATS-friendly it is.">
 
+<!-- ADD ADSENSE META TAG HERE LATER -->
+<!-- <meta name="google-adsense-account" content="ca-pub-XXXXXXXX"> -->
+
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
@@ -23,8 +26,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   --warning: #f59e0b;
   --danger: #dc2626;
   --bg: #f8fafc;
-  --card: rgba(255,255,255,0.85);
-  --border: rgba(255,255,255,0.6);
+  --card: rgba(255,255,255,0.9);
   --text: #0f172a;
   --muted: #64748b;
 }
@@ -39,19 +41,19 @@ body {
 }
 
 .container {
-  max-width: 980px;
+  max-width: 1000px;
   margin: 48px auto;
   padding: 0 20px;
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 
 .hero h1 {
-  font-size: 36px;
-  margin-bottom: 8px;
+  font-size: 38px;
+  margin-bottom: 10px;
 }
 
 .hero p {
@@ -61,8 +63,6 @@ body {
 
 .card {
   background: var(--card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 28px;
   margin-bottom: 28px;
@@ -84,9 +84,7 @@ input, textarea {
   font-size: 15px;
 }
 
-textarea {
-  min-height: 140px;
-}
+textarea { min-height: 140px; }
 
 button {
   width: 100%;
@@ -98,10 +96,6 @@ button {
   border: none;
   border-radius: 14px;
   cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.95;
 }
 
 .status {
@@ -125,7 +119,7 @@ button:hover {
   justify-content: center;
   font-size: 44px;
   font-weight: 800;
-  background: #f1f5f9;
+  background: #showcaseshowcase;
 }
 
 .green { color: var(--success); border: 8px solid var(--success); }
@@ -157,6 +151,28 @@ button:hover {
   font-size: 22px;
   margin-top: 6px;
 }
+
+.content-section {
+  margin-top: 40px;
+  line-height: 1.7;
+}
+
+.content-section h2 {
+  margin-top: 24px;
+}
+
+footer {
+  text-align: center;
+  font-size: 14px;
+  margin: 50px 0 20px;
+  color: var(--muted);
+}
+
+footer a {
+  color: var(--primary);
+  text-decoration: none;
+  margin: 0 6px;
+}
 </style>
 </head>
 
@@ -166,7 +182,7 @@ button:hover {
 
   <div class="hero">
     <h1>ATS Resume Checker</h1>
-    <p>See how well your resume matches the job description — instantly.</p>
+    <p>Check how well your resume matches a job description before recruiters see it.</p>
   </div>
 
   <div class="card">
@@ -186,6 +202,31 @@ button:hover {
 
     <div class="breakdown" id="breakdown"></div>
   </div>
+
+  <!-- CONTENT FOR ADSENSE + SEO -->
+  <div class="card content-section">
+    <h2>What is an ATS Resume Score?</h2>
+    <p>
+      Applicant Tracking Systems (ATS) are software tools used by companies to filter resumes
+      before they reach a human recruiter. An ATS resume score shows how closely your resume
+      matches a specific job description based on keywords, skills, experience signals, and
+      formatting rules.
+    </p>
+
+    <h2>How This ATS Resume Checker Works</h2>
+    <p>
+      This free ATS resume checker analyzes your resume directly in your browser and compares
+      it with the job description you provide. The score is calculated using keyword match,
+      skills alignment, role relevance, experience indicators, and ATS-friendly formatting.
+      No resumes or personal data are stored.
+    </p>
+  </div>
+
+  <footer>
+    <a href="about.html">About</a> |
+    <a href="privacy.html">Privacy Policy</a> |
+    <a href="contact.html">Contact</a>
+  </footer>
 
 </div>
 
