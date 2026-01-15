@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Free ATS Resume Checker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Upload resume PDF or Word and check ATS score using keyword match, skills alignment, role match, experience relevance, and ATS hygiene.">
+<meta name="description" content="Upload resume PDF or Word and check ATS score with full breakdown and line-by-line improvements.">
 
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -49,6 +49,8 @@ button { width:100%; padding:14px; background:#0a66c2; color:#fff; border:none; 
 <div class="result" id="result">
   <h2>ATS Score</h2>
   <h1 id="score"></h1>
+
+  <div id="breakdown" style="margin-bottom:20px;"></div>
 
   <h3>Line-by-Line Improvements</h3>
   <div id="fixes"></div>
@@ -96,7 +98,7 @@ async function readDOCX(file) {
   return result.value || "";
 }
 
-/* ================= ATS LOGIC ================= */
+/* ================= ATS SCORING ================= */
 
 function calculateATS() {
   const jd = document.getElementById("jobDesc").value.toLowerCase();
@@ -110,39 +112,44 @@ function calculateATS() {
   const resumeLines = resume.split("\n").filter(l => l.trim().length > 12);
   const jdKeywords = extractKeywords(jd);
 
-  /* 1. Keyword Match (45%) */
+  // 1. Keyword Match (45%)
   const keywordHits = jdKeywords.filter(k => resume.includes(k)).length;
   const keywordScore = ratio(keywordHits, jdKeywords.length);
 
-  /* 2. Skills Alignment (25%) */
+  // 2. Skills Alignment (25%)
   const skillWords = jdKeywords.filter(k => k.length >= 5);
   const skillHits = skillWords.filter(k => resume.includes(k)).length;
   const skillScore = ratio(skillHits, skillWords.length);
 
-  /* 3. Role & Title Match (15%) */
+  // 3. Role & Title Match (15%)
   const roleScore = jdKeywords.some(k => resume.includes(k)) ? 1 : 0;
 
-  /* 4. Experience Relevance (10%) */
+  // 4. Experience Relevance (10%)
   const experienceLines = resumeLines.filter(l =>
     /\b(led|managed|built|improved|designed|executed|delivered|scaled)\b/i.test(l)
   ).length;
   const experienceScore = ratio(experienceLines, resumeLines.length);
 
-  /* 5. ATS Hygiene (5%) */
+  // 5. ATS Hygiene (5%)
   const hygieneScore =
     resume.includes("|") || resume.includes("•") ? 0.6 : 1;
 
-  const finalScore = Math.round(
-    (
-      keywordScore * 0.45 +
-      skillScore * 0.25 +
-      roleScore * 0.15 +
-      experienceScore * 0.10 +
-      hygieneScore * 0.05
-    ) * 100
-  );
+  const breakdown = {
+    keyword: Math.round(keywordScore * 45),
+    skills: Math.round(skillScore * 25),
+    role: Math.round(roleScore * 15),
+    experience: Math.round(experienceScore * 10),
+    hygiene: Math.round(hygieneScore * 5)
+  };
 
-  renderOutput(finalScore, resumeLines, jdKeywords);
+  const finalScore =
+    breakdown.keyword +
+    breakdown.skills +
+    breakdown.role +
+    breakdown.experience +
+    breakdown.hygiene;
+
+  renderOutput(finalScore, breakdown, resumeLines, jdKeywords);
 }
 
 function extractKeywords(text) {
@@ -201,10 +208,22 @@ function improveLine(originalLine, jdKeywords) {
 
 /* ================= OUTPUT ================= */
 
-function renderOutput(score, lines, jdKeywords) {
+function renderOutput(score, breakdown, lines, jdKeywords) {
   const scoreEl = document.getElementById("score");
   scoreEl.innerText = score + "%";
   scoreEl.className = score >= 70 ? "green" : score >= 50 ? "orange" : "red";
+
+  const breakdownDiv = document.getElementById("breakdown");
+  breakdownDiv.innerHTML = `
+    <h3>Score Breakdown</h3>
+    <ul style="list-style:none;padding-left:0;">
+      <li>Keyword Match: <strong>${breakdown.keyword}</strong> / 45</li>
+      <li>Skills Alignment: <strong>${breakdown.skills}</strong> / 25</li>
+      <li>Role & Title Match: <strong>${breakdown.role}</strong> / 15</li>
+      <li>Experience Relevance: <strong>${breakdown.experience}</strong> / 10</li>
+      <li>ATS Hygiene: <strong>${breakdown.hygiene}</strong> / 5</li>
+    </ul>
+  `;
 
   const fixes = document.getElementById("fixes");
   fixes.innerHTML = "";
@@ -233,3 +252,4 @@ function renderOutput(score, lines, jdKeywords) {
 
 </body>
 </html>
+
